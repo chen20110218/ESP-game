@@ -5,6 +5,7 @@ local whitelist = {
     "qiaoyanbo12",
     "HYYNO1",
     "CS78chen",
+    "yufc276",
     
 }
 
