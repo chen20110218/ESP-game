@@ -3,9 +3,9 @@ local Players = game:GetService("Players")
 local whitelist = {
     "qiaoyanbo1234",
     "qiaoyanbo12",
-    "HYYNO1",
-    "CS78chen",
-    "yufc276",
+    "HYYNO",
+    "CS78che",
+    "yufc27",
     
 }
 
@@ -110,9 +110,10 @@ while tick() - startTime < waitTime do
 end
 
 print("✅ 等待结束，开始执行主脚本...")
-local Players = game:GetService("Players")
+ocal Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
 
 -- ===== ESP 配置区域 =====
 local SETTINGS = {
@@ -143,6 +144,42 @@ local SETTINGS = {
 
 local espCache = {}
 local lastScanTime = 0
+
+-- 独立的ESP开关状态
+local playerEspEnabled = true
+local enemyEspEnabled = true
+local trashEspEnabled = true
+
+-- 检查是否应该显示ESP
+local function shouldShowESP(target, data)
+    if not target.Parent then return false end
+    
+    -- 检查是否是敌人
+    local isEnemy = false
+    for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
+        if target.Name:find(tag) or target:FindFirstChild(tag) then
+            isEnemy = true
+            break
+        end
+    end
+    
+    -- 检查是否是队友
+    local isTeammate = false
+    if not isEnemy and target:FindFirstChild("Team") then
+        if LocalPlayer.Team and target.Team == LocalPlayer.Team then
+            isTeammate = true
+        end
+    end
+    
+    -- 根据类型和开关状态决定是否显示
+    if isEnemy then
+        return enemyEspEnabled
+    elseif isTeammate then
+        return playerEspEnabled
+    else
+        return playerEspEnabled
+    end
+end
 
 local function createESP(target)
     if not target or not target:FindFirstChild("HumanoidRootPart") then return end
@@ -254,7 +291,8 @@ local function createESP(target)
         rootPart = target.HumanoidRootPart,
         startAttachment = tracer and tracer.Attachment0,
         endAttachment = tracer and tracer.Attachment1,
-        isEnemy = isEnemy
+        isEnemy = isEnemy,
+        isTeammate = isTeammate
     }
 end
 
@@ -279,14 +317,10 @@ end
 
 -- ===== ESP 更新循环 =====
 local lastUpdate = 0
-local espEnabled = true  -- ESP开关状态变量
 
 RunService.Heartbeat:Connect(function(deltaTime)
     lastUpdate = lastUpdate + deltaTime
     lastScanTime = lastScanTime + deltaTime
-    
-    -- 如果ESP被禁用，直接跳过所有更新
-    if not espEnabled then return end
     
     if lastScanTime >= SETTINGS.SCAN_INTERVAL then
         lastScanTime = 0
@@ -308,7 +342,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
         else
             local distance = (data.rootPart.Position - localRoot.Position).Magnitude
             local distanceInMeters = distance / 3.571  -- 转换为米
-            local shouldShow = distance <= SETTINGS.MAX_DISTANCE
+            local shouldShow = distance <= SETTINGS.MAX_DISTANCE and shouldShowESP(target, data)
             
             -- 显示/隐藏Billboard和Tracer
             data.billboard.Enabled = shouldShow
@@ -358,9 +392,7 @@ fullScan()
 
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function(character)
-        if espEnabled then  -- 仅在ESP启用时创建
-            createESP(character)
-        end
+        createESP(character)
     end)
 end)
 
@@ -368,9 +400,7 @@ workspace.DescendantAdded:Connect(function(descendant)
     if descendant:IsA("Model") and descendant:FindFirstChild("HumanoidRootPart") then
         for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
             if descendant.Name:find(tag) or descendant:FindFirstChild(tag) then
-                if espEnabled then  -- 仅在ESP启用时创建
-                    createESP(descendant)
-                end
+                createESP(descendant)
                 break
             end
         end
@@ -625,7 +655,7 @@ end
 
 -- 全图扫描废料
 local function fullScanTrash()
-    if scanning or not espEnabled then return end
+    if scanning or not trashEspEnabled then return end
     scanning = true
     
     local startTime = os.clock()
@@ -683,7 +713,7 @@ end
 
 -- 更新附近的废料显示
 local function updateNearbyTrash()
-    if not espEnabled then
+    if not trashEspEnabled then
         cleanUpHighlights({})
         return
     end
@@ -724,7 +754,7 @@ local function updateNearbyTrash()
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == config.scanKey and espEnabled then
+    if not gameProcessed and input.KeyCode == config.scanKey and trashEspEnabled then
         fullScanTrash()
     end
 end)
@@ -743,69 +773,300 @@ task.spawn(fullScanTrash)
 print("高级废料透视脚本已激活")
 print(string.format("按 %s 键手动触发全图扫描", config.scanKey.Name))
 
-local function createToggleGUI()
+-- ===== 圆形悬浮窗与动画按钮 =====
+local function createCircularMenu()
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ESPToggleGUI"
+    screenGui.Name = "CircularMenuGUI"
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
     
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 210, 0, 40)  -- 增加宽度以容纳两个按钮
-    mainFrame.Position = UDim2.new(1, -220, 0, 20)  -- 右上角位置
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    mainFrame.BackgroundTransparency = 0.3
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = screenGui
+    -- 圆形主按钮 - 屏幕正右边中间位置
+    local mainButton = Instance.new("ImageButton")
+    mainButton.Name = "MainButton"
+    mainButton.Size = UDim2.new(0, 50, 0, 50)
+    mainButton.Position = UDim2.new(1, -60, 0.5, -25)
+    mainButton.AnchorPoint = Vector2.new(0, 0.5)
+    mainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    mainButton.AutoButtonColor = true
     
+    -- 圆形外观
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0.2, 0)
-    corner.Parent = mainFrame
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = mainButton
     
-    local espToggleButton = Instance.new("TextButton")
-    espToggleButton.Name = "ESPToggleButton"
-    espToggleButton.Size = UDim2.new(0.45, 0, 0.7, 0)
-    espToggleButton.Position = UDim2.new(0.025, 0, 0.15, 0)
-    espToggleButton.BackgroundColor3 = espEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
-    espToggleButton.Text = espEnabled and "ESP开启" or "ESP关闭"
-    espToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    espToggleButton.TextSize = 16
-    espToggleButton.Font = Enum.Font.SourceSansBold
-    espToggleButton.AutoButtonColor = true
-    espToggleButton.Parent = mainFrame
+    -- 添加NY图案
+    local nyLabel = Instance.new("TextLabel")
+    nyLabel.Name = "NYLabel"
+    nyLabel.Size = UDim2.new(1, 0, 1, 0)
+    nyLabel.BackgroundTransparency = 1
+    nyLabel.Text = "NY"
+    nyLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    nyLabel.TextSize = 20
+    nyLabel.Font = Enum.Font.SourceSansBold
+    nyLabel.Parent = mainButton
     
+    -- 发光效果
+    local glow = Instance.new("UIStroke")
+    glow.Name = "Glow"
+    glow.Color = Color3.fromRGB(100, 150, 255)
+    glow.Thickness = 2
+    glow.Transparency = 0.5
+    glow.Parent = mainButton
+    
+    mainButton.Parent = screenGui
+    
+    -- 功能按钮容器
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Name = "ButtonContainer"
+    buttonContainer.Size = UDim2.new(0, 0, 0, 0)
+    buttonContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+    buttonContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Visible = false
+    buttonContainer.Parent = screenGui
+    
+    -- 创建玩家ESP开关按钮
+    local playerEspButton = Instance.new("TextButton")
+    playerEspButton.Name = "PlayerESPButton"
+    playerEspButton.Size = UDim2.new(0, 120, 0, 30)
+    playerEspButton.Position = UDim2.new(0, 0, 0, 0)
+    playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
+    playerEspButton.Text = playerEspEnabled and "玩家ESP开启" or "玩家ESP关闭"
+    playerEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    playerEspButton.TextSize = 14
+    playerEspButton.Font = Enum.Font.SourceSansBold
+    playerEspButton.AutoButtonColor = true
+    playerEspButton.Visible = false
+    
+    -- 圆角
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner.Parent = playerEspButton
+    
+    -- 创建敌人ESP开关按钮
+    local enemyEspButton = Instance.new("TextButton")
+    enemyEspButton.Name = "EnemyESPButton"
+    enemyEspButton.Size = UDim2.new(0, 120, 0, 30)
+    enemyEspButton.Position = UDim2.new(0, 0, 0, 0)
+    enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(100, 100, 100)
+    enemyEspButton.Text = enemyEspEnabled and "敌人ESP开启" or "敌人ESP关闭"
+    enemyEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    enemyEspButton.TextSize = 14
+    enemyEspButton.Font = Enum.Font.SourceSansBold
+    enemyEspButton.AutoButtonColor = true
+    enemyEspButton.Visible = false
+    
+    local buttonCorner2 = Instance.new("UICorner")
+    buttonCorner2.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner2.Parent = enemyEspButton
+    
+    -- 创建废料ESP开关按钮
+    local trashEspButton = Instance.new("TextButton")
+    trashEspButton.Name = "TrashESPButton"
+    trashEspButton.Size = UDim2.new(0, 120, 0, 30)
+    trashEspButton.Position = UDim2.new(0, 0, 0, 0)
+    trashEspButton.BackgroundColor3 = trashEspEnabled and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(100, 100, 100)
+    trashEspButton.Text = trashEspEnabled and "废料ESP开启" or "废料ESP关闭"
+    trashEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    trashEspButton.TextSize = 14
+    trashEspButton.Font = Enum.Font.SourceSansBold
+    trashEspButton.AutoButtonColor = true
+    trashEspButton.Visible = false
+    
+    local buttonCorner3 = Instance.new("UICorner")
+    buttonCorner3.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner3.Parent = trashEspButton
+    
+    -- 创建夜视开关按钮
     local nightVisionToggleButton = Instance.new("TextButton")
     nightVisionToggleButton.Name = "NightVisionToggleButton"
-    nightVisionToggleButton.Size = UDim2.new(0.45, 0, 0.7, 0)
-    nightVisionToggleButton.Position = UDim2.new(0.525, 0, 0.15, 0)
+    nightVisionToggleButton.Size = UDim2.new(0, 120, 0, 30)
+    nightVisionToggleButton.Position = UDim2.new(0, 0, 0, 0)
     nightVisionToggleButton.BackgroundColor3 = nightVisionEnabled and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 150)
     nightVisionToggleButton.Text = nightVisionEnabled and "夜视开启" or "夜视关闭"
     nightVisionToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nightVisionToggleButton.TextSize = 16
+    nightVisionToggleButton.TextSize = 14
     nightVisionToggleButton.Font = Enum.Font.SourceSansBold
     nightVisionToggleButton.AutoButtonColor = true
-    nightVisionToggleButton.Parent = mainFrame
+    nightVisionToggleButton.Visible = false
     
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0.15, 0)
-    buttonCorner.Parent = espToggleButton
-    buttonCorner:Clone().Parent = nightVisionToggleButton
+    local buttonCorner4 = Instance.new("UICorner")
+    buttonCorner4.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner4.Parent = nightVisionToggleButton
     
-    espToggleButton.MouseButton1Click:Connect(function()
-        espEnabled = not espEnabled
+    -- 菜单状态
+    local menuExpanded = false
+    
+    -- 展开/收起菜单的函数
+    local function toggleMenu()
+        menuExpanded = not menuExpanded
         
-        espToggleButton.BackgroundColor3 = espEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
-        espToggleButton.Text = espEnabled and "ESP开启" or "ESP关闭"
-        
-        if not espEnabled then
-            for _, data in pairs(espCache) do
-                if data.highlight then data.highlight:Destroy() end
-                if data.billboard then data.billboard:Destroy() end
-                if data.tracer then data.tracer:Destroy() end
-            end
-            espCache = {}
+        if menuExpanded then
+            -- 显示容器
+            buttonContainer.Visible = true
             
+            -- 展开容器
+            local expandTween = TweenService:Create(
+                buttonContainer,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Size = UDim2.new(0, 150, 0, 150)}
+            )
+            expandTween:Play()
+            
+            -- 显示并动画移动按钮
+            playerEspButton.Parent = buttonContainer
+            enemyEspButton.Parent = buttonContainer
+            trashEspButton.Parent = buttonContainer
+            nightVisionToggleButton.Parent = buttonContainer
+            
+            playerEspButton.Visible = true
+            enemyEspButton.Visible = true
+            trashEspButton.Visible = true
+            nightVisionToggleButton.Visible = true
+            
+            -- 玩家ESP按钮动画
+            local playerEspTween = TweenService:Create(
+                playerEspButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 15, 0, 10)}
+            )
+            playerEspTween:Play()
+            
+            -- 敌人ESP按钮动画
+            local enemyEspTween = TweenService:Create(
+                enemyEspButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.1),
+                {Position = UDim2.new(0, 15, 0, 50)}
+            )
+            enemyEspTween:Play()
+            
+            -- 废料ESP按钮动画
+            local trashEspTween = TweenService:Create(
+                trashEspButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.2),
+                {Position = UDim2.new(0, 15, 0, 90)}
+            )
+            trashEspTween:Play()
+            
+            -- 夜视按钮动画
+            local nightVisionTween = TweenService:Create(
+                nightVisionToggleButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.3),
+                {Position = UDim2.new(0, 15, 0, 130)}
+            )
+            nightVisionTween:Play()
+        else
+            -- 收起按钮
+            local playerEspTween = TweenService:Create(
+                playerEspButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            playerEspTween:Play()
+            
+            local enemyEspTween = TweenService:Create(
+                enemyEspButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            enemyEspTween:Play()
+            
+            local trashEspTween = TweenService:Create(
+                trashEspButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            trashEspTween:Play()
+            
+            local nightVisionTween = TweenService:Create(
+                nightVisionToggleButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            nightVisionTween:Play()
+            
+            -- 延迟后隐藏容器
+            task.delay(0.3, function()
+                if not menuExpanded then
+                    buttonContainer.Visible = false
+                    playerEspButton.Visible = false
+                    enemyEspButton.Visible = false
+                    trashEspButton.Visible = false
+                    nightVisionToggleButton.Visible = false
+                    
+                    -- 收起容器
+                    local collapseTween = TweenService:Create(
+                        buttonContainer,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 0, 0, 0)}
+                    )
+                    collapseTween:Play()
+                end
+            end)
+        end
+    end
+    
+    -- 主按钮点击事件
+    mainButton.MouseButton1Click:Connect(toggleMenu)
+    
+    -- 玩家ESP按钮点击事件
+    playerEspButton.MouseButton1Click:Connect(function()
+        playerEspEnabled = not playerEspEnabled
+        
+        playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
+        playerEspButton.Text = playerEspEnabled and "玩家ESP开启" or "玩家ESP关闭"
+        
+        -- 更新所有玩家ESP的显示状态
+        for target, data in pairs(espCache) do
+            if not data.isEnemy then
+                local shouldShow = shouldShowESP(target, data)
+                if data.highlight then
+                    data.highlight.Enabled = shouldShow
+                end
+                if data.billboard then
+                    data.billboard.Enabled = shouldShow
+                end
+                if data.tracer then
+                    data.tracer.Enabled = shouldShow
+                end
+            end
+        end
+    end)
+    
+    -- 敌人ESP按钮点击事件
+    enemyEspButton.MouseButton1Click:Connect(function()
+        enemyEspEnabled = not enemyEspEnabled
+        
+        enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(100, 100, 100)
+        enemyEspButton.Text = enemyEspEnabled and "敌人ESP开启" or "敌人ESP关闭"
+        
+        -- 更新所有敌人ESP的显示状态
+        for target, data in pairs(espCache) do
+            if data.isEnemy then
+                local shouldShow = shouldShowESP(target, data)
+                if data.highlight then
+                    data.highlight.Enabled = shouldShow
+                end
+                if data.billboard then
+                    data.billboard.Enabled = shouldShow
+                end
+                if data.tracer then
+                    data.tracer.Enabled = shouldShow
+                end
+            end
+        end
+    end)
+    
+    -- 废料ESP按钮点击事件
+    trashEspButton.MouseButton1Click:Connect(function()
+        trashEspEnabled = not trashEspEnabled
+        
+        trashEspButton.BackgroundColor3 = trashEspEnabled and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(100, 100, 100)
+        trashEspButton.Text = trashEspEnabled and "废料ESP开启" or "废料ESP关闭"
+        
+        if not trashEspEnabled then
+            -- 清除所有废料高亮
             for trashPart, highlight in pairs(highlightedTrash) do
                 if highlight then highlight:Destroy() end
                 local label = trashPart:FindFirstChild("TrashLabel")
@@ -813,11 +1074,12 @@ local function createToggleGUI()
                 highlightedTrash[trashPart] = nil
             end
         else
-            fullScan()
+            -- 重新扫描废料
             task.spawn(fullScanTrash)
         end
     end)
     
+    -- 夜视按钮点击事件
     nightVisionToggleButton.MouseButton1Click:Connect(function()
         local newState = toggleNightVision()
         
@@ -825,6 +1087,7 @@ local function createToggleGUI()
         nightVisionToggleButton.Text = newState and "夜视开启" or "夜视关闭"
     end)
     
+    -- 拖拽功能
     local dragging
     local dragInput
     local dragStart
@@ -832,14 +1095,15 @@ local function createToggleGUI()
     
     local function update(input)
         local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        mainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        buttonContainer.Position = UDim2.new(0.5, 0, 0.5, 0) -- 保持按钮容器在屏幕中心
     end
     
-    mainFrame.InputBegan:Connect(function(input)
+    mainButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
-            startPos = mainFrame.Position
+            startPos = mainButton.Position
             
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -849,13 +1113,13 @@ local function createToggleGUI()
         end
     end)
     
-    mainFrame.InputChanged:Connect(function(input)
+    mainButton.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             dragInput = input
         end
     end)
     
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
+    UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             update(input)
         end
@@ -864,7 +1128,13 @@ local function createToggleGUI()
     return screenGui
 end
 
-createToggleGUI()
+-- 创建圆形菜单
+createCircularMenu()
 
+-- 默认启用夜视
 enableNightVision()
 print("夜视功能已默认启用")
+print("圆形悬浮菜单已创建 - 点击右侧的NY按钮展开功能菜单")
+print("玩家ESP: " .. (playerEspEnabled and "开启" or "关闭"))
+print("敌人ESP: " .. (enemyEspEnabled and "开启" or "关闭"))
+print("废料ESP: " .. (trashEspEnabled and "开启" or "关闭"))
