@@ -356,38 +356,6 @@ local function createESP(target)
     if not isEnemy and target:FindFirstChild("Team") then
         if LocalPlayer.Team and target.Team == LocalPlayer.Team then
             isTeammate = true
-        end
-    end
-    
-    if isEnemy then
-        return enemyEspEnabled
-    elseif isTeammate then
-        return playerEspEnabled
-    else
-        return playerEspEnabled
-    end
-end
-
-local function createESP(target)
-    if not target or not target:FindFirstChild("HumanoidRootPart") then return end
-    
-    if espCache[target] then return end
-    
-    local isEnemy = false
-    local isTeammate = false
-    local espColor = SETTINGS.PLAYER_COLOR
-    
-    for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
-        if target.Name:find(tag) or target:FindFirstChild(tag) then
-            isEnemy = true
-            espColor = SETTINGS.ENEMY_COLOR
-            break
-        end
-    end
-    
-    if not isEnemy and target:FindFirstChild("Team") then
-        if LocalPlayer.Team and target.Team == LocalPlayer.Team then
-            isTeammate = true
             espColor = SETTINGS.TEAM_COLOR
         end
     end
@@ -1532,7 +1500,7 @@ local function createCircularMenu()
     titleBar.Size = UDim2.new(1, 0, 0, 30)
     titleBar.Position = UDim2.new(0, 0, 0, 0)
     titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    titleBar.BorrowSizePixel = 0
+    titleBar.BorderSizePixel = 0
     titleBar.ZIndex = 3
     
     local titleCorner = Instance.new("UICorner")
@@ -2115,7 +2083,7 @@ print("玩家ESP: " .. (playerEspEnabled and "开启" or "关闭"))
 print("敌人ESP: " .. (enemyEspEnabled and "开启" or "关闭"))
 print("废料ESP: " .. (trashEspEnabled and "开启" or "关闭"))
 print("信号枪透视: " .. (flareGunEspEnabled and "开启" or "关闭"))
-print("空投透视: " .. (airdropEspEnabled and "开启"或"关闭"))
+print("空投透视: " .. (airdropEspEnabled and "开启" or "关闭"))
 print("速度提升: " .. (isSpeedBoostEnabled and "开启" or "关闭"))
 print("地点标记: " .. (isLocationMarkersEnabled and "开启" or "关闭"))
 print("夜视功能: " .. (nightVisionEnabled and "开启" or "关闭"))
