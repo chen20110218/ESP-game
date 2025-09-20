@@ -41,7 +41,7 @@ local flareGunEspEnabled = false  -- 信号枪透视开关
 local airdropEspEnabled = false   -- 空投透视开关
 
 -- 速度控制变量 - 默认关闭
-local TARGET_SPEED = 24.8
+local TARGET_SPEED = 28
 local isSpeedBoostEnabled = false
 local currentHumanoid = nil
 local speedMaintainConnection = nil
@@ -1573,8 +1573,8 @@ local function createCircularMenu()
     playerEspButton.Name = "PlayerESPButton"
     playerEspButton.Size = UDim2.new(1, 0, 0, 30)
     playerEspButton.Position = UDim2.new(0, 0, 0, 0)
-    playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
-    playerEspButton.Text = playerEspEnabled and "玩家ESP开启" or "玩家ESP关闭"
+    playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(100, 100, 100)
+    playerEspButton.Text = playerEspEnabled and "玩家透视开启" or "玩家透视关闭"
     playerEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     playerEspButton.TextSize = 14
     playerEspButton.Font = Enum.Font.SourceSansBold
@@ -1591,8 +1591,8 @@ local function createCircularMenu()
     enemyEspButton.Name = "EnemyESPButton"
     enemyEspButton.Size = UDim2.new(1, 0, 0, 30)
     enemyEspButton.Position = UDim2.new(0, 0, 0, 40)
-    enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
-    enemyEspButton.Text = enemyEspEnabled and "敌人ESP开启" or "敌人ESP关闭"
+    enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(100, 100, 100)
+    enemyEspButton.Text = enemyEspEnabled and "Rake透视开启" or "Rake透视关闭"
     enemyEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     enemyEspButton.TextSize = 14
     enemyEspButton.Font = Enum.Font.SourceSansBold
@@ -1609,7 +1609,7 @@ local function createCircularMenu()
     trashEspButton.Size = UDim2.new(1, 0, 0, 30)
     trashEspButton.Position = UDim2.new(0, 0, 0, 80)
     trashEspButton.BackgroundColor3 = trashEspEnabled and Color3.fromRGB(150, 75, 0) or Color3.fromRGB(100, 100, 100)
-    trashEspButton.Text = trashEspEnabled and "废料ESP开启" or "废料ESP关闭"
+    trashEspButton.Text = trashEspEnabled and "废料透视开启" or "废料透视关闭"
     trashEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     trashEspButton.TextSize = 14
     trashEspButton.Font = Enum.Font.SourceSansBold
@@ -1642,7 +1642,7 @@ local function createCircularMenu()
     nightVisionToggleButton.Name = "NightVisionToggleButton"
     nightVisionToggleButton.Size = UDim2.new(1, 0, 0, 30)
     nightVisionToggleButton.Position = UDim2.new(0, 0, 0, 0)
-    nightVisionToggleButton.BackgroundColor3 = nightVisionEnabled and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 150)
+    nightVisionToggleButton.BackgroundColor3 = nightVisionEnabled and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 100)
     nightVisionToggleButton.Text = nightVisionEnabled and "夜视开启" or "夜视关闭"
     nightVisionToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     nightVisionToggleButton.TextSize = 14
@@ -1659,7 +1659,7 @@ local function createCircularMenu()
     speedToggleButton.Name = "SpeedToggleButton"
     speedToggleButton.Size = UDim2.new(1, 0, 0, 30)
     speedToggleButton.Position = UDim2.new(0, 0, 0, 40)
-    speedToggleButton.BackgroundColor3 = isSpeedBoostEnabled and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(150, 150, 150)
+    speedToggleButton.BackgroundColor3 = isSpeedBoostEnabled and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(100, 100, 100)
     speedToggleButton.Text = isSpeedBoostEnabled and "速度开启" or "速度关闭"
     speedToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     speedToggleButton.TextSize = 14
@@ -1676,7 +1676,7 @@ local function createCircularMenu()
     locationMarkersButton.Name = "LocationMarkersButton"
     locationMarkersButton.Size = UDim2.new(1, 0, 0, 30)
     locationMarkersButton.Position = UDim2.new(0, 0, 0, 80)
-    locationMarkersButton.BackgroundColor3 = isLocationMarkersEnabled and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(150, 150, 150)
+    locationMarkersButton.BackgroundColor3 = isLocationMarkersEnabled and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(100, 100, 100)
     locationMarkersButton.Text = isLocationMarkersEnabled and "地点标记开启" or "地点标记关闭"
     locationMarkersButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     locationMarkersButton.TextSize = 14
@@ -1771,8 +1771,8 @@ local function createCircularMenu()
     playerEspButton.MouseButton1Click:Connect(function()
         playerEspEnabled = not playerEspEnabled
         
-        playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
-        playerEspButton.Text = playerEspEnabled and "玩家ESP开启" or "玩家ESP关闭"
+        playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(100, 100, 100)
+        playerEspButton.Text = playerEspEnabled and "玩家透视开启" or "玩家透视关闭"
         
         -- 更新所有玩家ESP的显示状态
         for target, data in pairs(espCache) do
@@ -1795,8 +1795,8 @@ local function createCircularMenu()
     enemyEspButton.MouseButton1Click:Connect(function()
         enemyEspEnabled = not enemyEspEnabled
         
-        enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
-        enemyEspButton.Text = enemyEspEnabled and "敌人ESP开启" or "敌人ESP关闭"
+        enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(100, 100, 100)
+        enemyEspButton.Text = enemyEspEnabled and "Rake透视开启" or "Rake透视关闭"
         
         -- 更新所有敌人ESP的显示状态
         for target, data in pairs(espCache) do
@@ -1820,7 +1820,7 @@ local function createCircularMenu()
         trashEspEnabled = not trashEspEnabled
         
         trashEspButton.BackgroundColor3 = trashEspEnabled and Color3.fromRGB(150, 75, 0) or Color3.fromRGB(100, 100, 100)
-        trashEspButton.Text = trashEspEnabled and "废料ESP开启" or "废料ESP关闭"
+        trashEspButton.Text = trashEspEnabled and "废料透视开启" or "废料透视关闭"
         
         if not trashEspEnabled then
             -- 清除所有废料高亮
@@ -1861,7 +1861,7 @@ local function createCircularMenu()
     nightVisionToggleButton.MouseButton1Click:Connect(function()
         local newState = toggleNightVision()
         
-        nightVisionToggleButton.BackgroundColor3 = newState and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 150)
+        nightVisionToggleButton.BackgroundColor3 = newState and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 100)
         nightVisionToggleButton.Text = newState and "夜视开启" or "夜视关闭"
     end)
     
@@ -1869,15 +1869,15 @@ local function createCircularMenu()
     speedToggleButton.MouseButton1Click:Connect(function()
         local newState = toggleSpeedBoost()
         
-        speedToggleButton.BackgroundColor3 = newState and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(150, 150, 150)
-        speedToggleButton.Text = newState and "速度开启" or "速度关闭"
+        speedToggleButton.BackgroundColor3 = newState and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(100, 100, 100)
+        speedToggleButton.Text = newState and "速度提升开启" or "速度提升关闭"
     end)
     
     -- 地点标记按钮点击事件
     locationMarkersButton.MouseButton1Click:Connect(function()
         local newState = toggleLocationMarkers()
         
-        locationMarkersButton.BackgroundColor3 = newState and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(150, 150, 150)
+        locationMarkersButton.BackgroundColor3 = newState and Color3.fromRGB(170, 0, 255) or Color3.fromRGB(100, 100, 100)
         locationMarkersButton.Text = newState and "地点标记开启" or "地点标记关闭"
     end)
     
